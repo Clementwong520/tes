@@ -1,0 +1,1629 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flat Rate 分期利息計算器 © ClementWong</title>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js">
+    </script>
+    <style>
+        /* ===== 全域變數 ===== */
+        :root {
+            --bg-start: #eef2f7;
+            --bg-end: #d9e0eb;
+            --card-bg: #ffffff;
+            --primary: #1f2b4e;
+            --primary-light: #2c3e7b;
+            --primary-gradient: linear-gradient(135deg, #1f2b4e 0%, #2c3e7b 100%);
+            --accent: #e8832b;
+            --accent-hover: #d4741f;
+            --accent-glow: rgba(232, 131, 43, 0.35);
+            --text: #1e272e;
+            --text-light: #5f6b7a;
+            --border: #e2e8f0;
+            --input-bg: #f7f9fc;
+            --highlight: #fff8f0;
+            --result-bg: #f4f7fd;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 8px 28px rgba(0, 0, 0, 0.08);
+            --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.12);
+            --radius: 16px;
+            --radius-sm: 10px;
+            --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            --font: 'Segoe UI', 'PingFang TC', 'Microsoft JhengHei', 'Helvetica Neue', system-ui, -apple-system, sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font);
+            background: linear-gradient(145deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: 24px 12px 48px;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 780px;
+            animation: fadeUp 0.6s ease both;
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(24px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ===== 標頭（僅圖示） ===== */
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 6px 0 2px;
+        }
+        .header .icon {
+            font-size: 44px;
+            display: inline-block;
+            background: var(--primary-gradient);
+            color: #fff;
+            width: 72px;
+            height: 72px;
+            line-height: 78px;
+            border-radius: 50%;
+            box-shadow: 0 8px 24px rgba(31, 43, 78, 0.20);
+            transition: var(--transition);
+        }
+        .header .icon:hover {
+            transform: scale(1.04) rotate(-2deg);
+            box-shadow: 0 12px 32px rgba(31, 43, 78, 0.28);
+        }
+
+        /* ===== 語言欄 ===== */
+        .lang-bar {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+        }
+        .lang-bar select {
+            padding: 7px 14px;
+            border-radius: 20px;
+            border: 2px solid var(--border);
+            background: var(--card-bg);
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text);
+            cursor: pointer;
+            outline: none;
+            transition: var(--transition);
+            font-family: var(--font);
+            box-shadow: var(--shadow-sm);
+        }
+        .lang-bar select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(232, 131, 43, 0.15);
+        }
+
+        /* ===== 卡片 ===== */
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-md);
+            padding: 26px 24px;
+            margin-bottom: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(2px);
+            transition: var(--transition);
+        }
+        .card:hover {
+            box-shadow: var(--shadow-lg);
+        }
+
+        .card-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            letter-spacing: 0.3px;
+        }
+        .card-title .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--accent);
+            display: inline-block;
+            flex-shrink: 0;
+            box-shadow: 0 0 0 3px rgba(232, 131, 43, 0.20);
+        }
+
+        /* ===== 表單 ===== */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px 20px;
+        }
+        @media (max-width: 540px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+        .form-group label {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 5px;
+            letter-spacing: 0.2px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .form-group label .unit {
+            font-weight: 400;
+            color: var(--text-light);
+            font-size: 0.75rem;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 11px 14px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 0.95rem;
+            background: var(--input-bg);
+            color: var(--text);
+            transition: var(--transition);
+            outline: none;
+            font-family: var(--font);
+        }
+        .form-group input:focus {
+            border-color: var(--primary-light);
+            box-shadow: 0 0 0 4px rgba(44, 62, 123, 0.08);
+            background: #fff;
+        }
+        .form-group input.input-highlight {
+            border-color: var(--accent);
+            background: var(--highlight);
+        }
+        .form-group input.input-highlight:focus {
+            border-color: var(--accent-hover);
+            box-shadow: 0 0 0 4px rgba(232, 131, 43, 0.10);
+        }
+
+        /* ===== 開關 ===== */
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+            padding: 6px 0;
+        }
+        .toggle-label-text {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text);
+        }
+        .toggle-switch {
+            position: relative;
+            width: 56px;
+            height: 30px;
+            flex-shrink: 0;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #cbd5e1;
+            border-radius: 30px;
+            transition: 0.3s;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.10);
+        }
+        .toggle-slider:before {
+            content: '';
+            position: absolute;
+            height: 24px;
+            width: 24px;
+            left: 3px;
+            bottom: 3px;
+            background: #fff;
+            border-radius: 50%;
+            transition: 0.3s;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+        }
+        .toggle-switch input:checked+.toggle-slider {
+            background: var(--accent);
+            box-shadow: 0 0 0 3px rgba(232, 131, 43, 0.20);
+        }
+        .toggle-switch input:checked+.toggle-slider:before {
+            transform: translateX(26px);
+        }
+        .toggle-hint {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            font-weight: 500;
+        }
+
+        /* ===== 單選按鈕 ===== */
+        .radio-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 500;
+            font-size: 0.85rem;
+            cursor: pointer;
+            padding: 8px 16px;
+            border-radius: 24px;
+            border: 2px solid var(--border);
+            transition: var(--transition);
+            user-select: none;
+            background: var(--input-bg);
+        }
+        .radio-group label:hover {
+            border-color: #b8c4d0;
+            background: #f1f4f8;
+        }
+        .radio-group input[type="radio"] {
+            accent-color: var(--accent);
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+        .radio-group label:has(input:checked) {
+            border-color: var(--accent);
+            background: var(--highlight);
+            font-weight: 700;
+            box-shadow: 0 0 0 3px rgba(232, 131, 43, 0.08);
+        }
+
+        /* ===== 按鈕 ===== */
+        .btn-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 14px;
+        }
+        .btn {
+            padding: 12px 28px;
+            border-radius: 30px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            letter-spacing: 0.4px;
+            transition: var(--transition);
+            font-family: var(--font);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-calc {
+            background: var(--accent);
+            color: #fff;
+            box-shadow: 0 4px 16px var(--accent-glow);
+        }
+        .btn-calc:hover {
+            background: var(--accent-hover);
+            box-shadow: 0 8px 24px rgba(232, 131, 43, 0.45);
+            transform: translateY(-2px);
+        }
+        .btn-calc:active {
+            transform: translateY(0);
+        }
+        .btn-reset {
+            background: var(--card-bg);
+            color: var(--text);
+            border: 2px solid var(--border);
+        }
+        .btn-reset:hover {
+            background: #f1f4f8;
+            border-color: #b8c4d0;
+            transform: translateY(-2px);
+        }
+        .btn-export {
+            background: var(--primary-gradient);
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(31, 43, 78, 0.30);
+        }
+        .btn-export:hover {
+            box-shadow: 0 8px 24px rgba(31, 43, 78, 0.40);
+            transform: translateY(-2px);
+        }
+        .btn-export:active {
+            transform: translateY(0);
+        }
+
+        /* ===== 結果區域 ===== */
+        .result-section {
+            background: var(--result-bg);
+            border-radius: var(--radius);
+            padding: 20px 22px;
+            border: 2px solid #dce3f0;
+            margin-top: 6px;
+        }
+        .result-section h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px 16px;
+        }
+        @media (max-width: 540px) {
+            .result-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 14px;
+            background: #fff;
+            border-radius: var(--radius-sm);
+            border: 1px solid #e8ecf2;
+            gap: 10px;
+            transition: var(--transition);
+        }
+        .result-item:hover {
+            border-color: #cdd7e6;
+            box-shadow: var(--shadow-sm);
+        }
+        .result-item .r-label {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        .result-item .r-value {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text);
+            text-align: right;
+            word-break: break-all;
+        }
+        .result-item .r-value.highlight {
+            color: var(--accent);
+            font-size: 1.1rem;
+        }
+        .result-item .r-value.big {
+            font-size: 1.25rem;
+            color: var(--primary);
+        }
+
+        /* ===== 步驟 ===== */
+        .steps-section {
+            margin-top: 14px;
+            background: #fff;
+            border-radius: var(--radius-sm);
+            padding: 16px 18px;
+            border: 1px solid #e8ecf2;
+        }
+        .steps-section h4 {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+        .step-line {
+            font-size: 0.82rem;
+            color: #3d4a5a;
+            padding: 5px 0;
+            font-family: 'SF Mono', 'Cascadia Code', 'Consolas', 'PingFang TC', monospace;
+            border-bottom: 1px dotted #eef2f6;
+            line-height: 1.8;
+        }
+        .step-line:last-child {
+            border-bottom: none;
+        }
+        .step-line .arrow {
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        /* ===== 表格 ===== */
+        .steps-section table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+            margin-top: 6px;
+            text-align: center;
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+        }
+        .steps-section table thead tr {
+            background: var(--primary-gradient);
+            color: #fff;
+            font-weight: 700;
+        }
+        .steps-section table thead th {
+            padding: 10px 8px;
+            border: none;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+        .steps-section table tbody tr {
+            border-bottom: 1px solid #eef2f6;
+            transition: var(--transition);
+        }
+        .steps-section table tbody tr:hover {
+            background: #f8faff;
+        }
+        .steps-section table tbody td {
+            padding: 9px 8px;
+            border: none;
+            border-bottom: 1px solid #eef2f6;
+        }
+        .steps-section table tbody tr:last-child td {
+            border-bottom: none;
+        }
+        .steps-section table tfoot tr {
+            background: #fffdf5;
+            font-weight: 700;
+            border-top: 2px solid var(--accent);
+        }
+        .steps-section table tfoot td {
+            padding: 10px 8px;
+            border: none;
+            color: var(--accent);
+        }
+        .steps-section table .period-cell {
+            font-weight: 600;
+            color: var(--primary);
+        }
+        .steps-section table .amount-cell {
+            font-weight: 700;
+        }
+        .steps-section table .note-cell {
+            font-size: 0.75rem;
+            color: var(--text-light);
+        }
+
+        /* ===== 不分期 ===== */
+        .no-installment-result {
+            text-align: center;
+            padding: 24px 16px;
+            background: #fff;
+            border-radius: var(--radius-sm);
+            border: 1px solid #e8ecf2;
+        }
+        .no-installment-result .big-amount {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin: 8px 0;
+        }
+        .no-installment-result .note {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            margin-top: 4px;
+        }
+
+        /* ===== 警告 ===== */
+        .warning-note {
+            font-size: 0.78rem;
+            color: #c0392b;
+            margin-top: 8px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: #fef3f2;
+            padding: 8px 14px;
+            border-radius: 8px;
+            border-left: 4px solid #c0392b;
+        }
+
+        /* ===== 輔助 ===== */
+        .hidden {
+            display: none !important;
+        }
+        .export-container {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 12px;
+        }
+        .footer-note {
+            text-align: center;
+            font-size: 0.75rem;
+            color: #9aa9b9;
+            margin-top: 10px;
+        }
+        .copyright {
+            text-align: center;
+            font-size: 0.78rem;
+            color: #8a9aab;
+            margin-top: 6px;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+        }
+
+        /* ===== 響應 ===== */
+        @media (max-width: 480px) {
+            .card {
+                padding: 18px 14px;
+            }
+            .form-grid {
+                gap: 10px;
+            }
+            .btn {
+                padding: 10px 18px;
+                font-size: 0.85rem;
+                width: 100%;
+                justify-content: center;
+            }
+            .btn-row {
+                flex-direction: column;
+            }
+            .result-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 2px;
+            }
+            .result-item .r-value {
+                text-align: left;
+            }
+            .lang-bar {
+                justify-content: center;
+            }
+            .header .icon {
+                width: 60px;
+                height: 60px;
+                line-height: 66px;
+                font-size: 36px;
+            }
+            .steps-section table {
+                font-size: 0.75rem;
+            }
+            .steps-section table thead th,
+            .steps-section table tbody td {
+                padding: 6px 4px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <!-- ===== 語言欄 ===== -->
+        <div class="lang-bar">
+            <span style="font-weight:600;">🌐</span>
+            <select id="langSelect">
+                <option value="zh-TW">繁體中文</option>
+                <option value="zh-CN">简体中文</option>
+                <option value="en">English</option>
+            </select>
+        </div>
+
+        <!-- ===== 標頭（僅圖示） ===== -->
+        <div class="header">
+            <div class="icon">🧮</div>
+        </div>
+
+        <!-- ===== 輸入卡片 ===== -->
+        <div class="card" id="inputCard">
+            <div class="card-title">
+                <span class="dot"></span> <span id="inputCardTitle">請輸入計算參數</span>
+            </div>
+
+            <div class="toggle-row">
+                <span class="toggle-label-text" id="toggleLabel">📋 分期付款</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="installmentToggle" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+                <span class="toggle-hint" id="toggleHint">（開啟：使用 Flat Rate 計算分期）</span>
+            </div>
+
+            <div class="form-grid" id="formGrid">
+                <div class="form-group">
+                    <label for="itemPrice" id="labelPrice">💰 商品價格（號價） <span class="unit" id="priceUnitLabel">TWD</span></label>
+                    <input type="number" id="itemPrice" value="14000" min="0" step="1" placeholder="例：14000" class="input-highlight">
+                </div>
+
+                <div class="form-group">
+                    <label for="baseCurrency" id="labelBaseCurrency">💱 基礎貨幣名稱 <span class="unit">（顯示用）</span></label>
+                    <input type="text" id="baseCurrency" value="TWD" placeholder="例如 TWD、USD、MYR" class="input-highlight">
+                </div>
+
+                <div class="form-group" id="interestRateGroup">
+                    <label for="interestRate" id="labelInterestRate">📈 月利率 <span class="unit">%</span></label>
+                    <input type="number" id="interestRate" value="1" min="0" step="0.01" placeholder="例：1（每月利率）" class="input-highlight">
+                </div>
+
+                <div class="form-group">
+                    <label for="deposit" id="labelDeposit">💵 訂金 <span class="unit" id="depositUnitLabel">TWD</span></label>
+                    <input type="number" id="deposit" value="2150" min="0" step="1" placeholder="例：2150">
+                </div>
+
+                <div class="form-group full-width" id="modeGroup">
+                    <label style="margin-bottom:8px;" id="labelMode">🔧 還款方式設定</label>
+                    <div class="radio-group" id="modeRadioGroup">
+                        <label id="radioByAmount">
+                            <input type="radio" name="calcMode" value="byAmount" checked>
+                            <span id="radioByAmountText">指定每月還款金額</span>
+                        </label>
+                        <label id="radioByMonths">
+                            <input type="radio" name="calcMode" value="byMonths">
+                            <span id="radioByMonthsText">指定還款月數</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group" id="monthlyAmountGroup">
+                    <label for="monthlyAmount" id="labelMonthlyAmount">💳 每月分期金額 <span class="unit" id="monthlyUnitLabel">TWD</span></label>
+                    <input type="number" id="monthlyAmount" value="3000" min="1" step="1" placeholder="例：3000" class="input-highlight">
+                </div>
+
+                <div class="form-group hidden" id="repayMonthsGroup">
+                    <label for="repayMonths" id="labelRepayMonths">📅 還款月數 <span class="unit">（月）</span></label>
+                    <input type="number" id="repayMonths" value="5" min="1" step="1" placeholder="例：5" class="input-highlight">
+                </div>
+
+                <div class="form-group">
+                    <label for="exchangeRate" id="labelExchangeRate">🌐 匯率換算 <span class="unit">（可選，1 基礎幣 = ?）</span></label>
+                    <input type="number" id="exchangeRate" value="" min="0" step="0.0001" placeholder="留空則不換算，例：0.22（CNY）">
+                </div>
+
+                <div class="form-group">
+                    <label for="targetCurrency" id="labelTargetCurrency">💱 目標貨幣名稱 <span class="unit">（可選）</span></label>
+                    <input type="text" id="targetCurrency" value="CNY" placeholder="例：CNY / USD / JPY">
+                </div>
+            </div>
+
+            <div class="btn-row">
+                <button class="btn btn-calc" id="btnCalc">🔍 計算分期</button>
+                <button class="btn btn-reset" id="btnReset">🔄 恢復預設</button>
+            </div>
+        </div>
+
+        <!-- ===== 結果卡片 ===== -->
+        <div class="card" id="resultCard">
+            <div class="card-title">
+                <span class="dot"></span> <span id="resultCardTitle">📊 計算結果</span>
+            </div>
+            <div id="resultContent"></div>
+            <div class="export-container">
+                <button class="btn btn-export" id="btnExport">📸 匯出結果圖片 (JPG)</button>
+            </div>
+        </div>
+
+        <div class="footer-note" id="footerNote"></div>
+        <div class="copyright">
+            © <span id="currentYear"></span> ClementWong. All rights reserved.
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        //  多語言資源（更新步驟描述以反映新算法）
+        // ============================================================
+        const LANG = {
+            'zh-TW': {
+                inputCardTitle: '請輸入計算參數',
+                toggleLabel: '📋 分期付款',
+                toggleHintOn: '（開啟：使用 Flat Rate 計算分期）',
+                toggleHintOff: '（關閉：一次性付清，無利息）',
+                labelPrice: '💰 商品價格（號價）',
+                labelBaseCurrency: '💱 基礎貨幣名稱 （顯示用）',
+                labelInterestRate: '📈 月利率',
+                labelDeposit: '💵 訂金',
+                labelMode: '🔧 還款方式設定',
+                radioByAmount: '指定每月還款金額',
+                radioByMonths: '指定還款月數',
+                labelMonthlyAmount: '💳 每月分期金額',
+                labelRepayMonths: '📅 還款月數 （月）',
+                labelExchangeRate: '🌐 匯率換算 （可選，1 基礎幣 = ?）',
+                labelTargetCurrency: '💱 目標貨幣名稱 （可選）',
+                btnCalc: '🔍 計算分期',
+                btnReset: '🔄 恢復預設',
+                resultCardTitle: '📊 計算結果',
+                btnExport: '📸 匯出結果圖片 (JPG)',
+                footerNote: '',
+                noInstallmentTitle: '📌 不分期 · 一次性付清（無利息）',
+                noInstallmentBalance: '應付餘額',
+                noInstallmentNote: '商品價格 {price} {cur} − 訂金 {deposit} {cur} = 應付 {balance} {cur}',
+                resultSummary: '📋 分期計算摘要',
+                labelTotalInterest: '💰 總利息',
+                labelTotalInstallment: '🧾 分期總額',
+                labelBalanceAfterDeposit: '📦 扣除訂金後餘額',
+                labelMonthlyPayment: '💳 每月還款金額',
+                labelLastPayment: '🔔 最後一期金額',
+                labelActualMonths: '📅 實際還款月數',
+                labelTotalRepayment: '✅ 分期還款總計',
+                exchangeTitle: '🌐 匯率換算（1 {base} ≈ {rate} {target}）',
+                exchangeTotalInterest: '💰 總利息',
+                exchangeTotalInstallment: '🧾 分期總額',
+                exchangeBalance: '📦 餘額',
+                exchangeMonthly: '💳 每月還款',
+                exchangeLast: '🔔 最後一期',
+                stepsTitle: '📝 計算步驟（Flat Rate）',
+                // 修改 step1 加入期數
+                step1: '① 總利息 = 商品價格 × 月利率 × 期數 = {price} {cur} × {rate}% × {months} = <strong>{totalInterest} {cur}</strong>',
+                step2: '② 分期總額 = 商品價格 + 總利息 = {price} + {totalInterest} = <strong>{totalInstallment} {cur}</strong>',
+                step3: '③ 扣除訂金後餘額 = {totalInstallment} − {deposit} = <strong>{balance} {cur}</strong>',
+                // 修改 step4ByAmount 為解方程描述
+                step4ByAmount: '④ 由公式 餘額 = 商品價格 × (1 + 月利率 × 期數) − 訂金，且每月還款 {monthly}，解得期數 ≈ {approx}，取整為 {months} 個月',
+                step5Last: '⑤ 最後一期 = {balance} − {monthly} × {monthsMinus} = <strong>{last} {cur}</strong>',
+                step4ByMonths: '④ 每月還款 = 餘額 ÷ 月數 = {balance} ÷ {months} = 每月 <strong>{monthly} {cur}</strong>（前 {monthsMinus} 期）',
+                step5LastByMonths: '⑤ 最後一期 = {balance} − {monthly} × {monthsMinus} = <strong>{last} {cur}</strong>',
+                tableTitle: '📋 分期還款明細表',
+                tableHeaderPeriod: '期數',
+                tableHeaderAmount: '應還金額 ({cur})',
+                tableHeaderExchange: '約合 {target}',
+                tableHeaderNote: '備註',
+                tablePeriod: '第 {i} 期',
+                tableNoteNormal: '正常還款',
+                tableNoteLast: '最後一期（尾款）',
+                tableTotal: '合計',
+                warningLastDiff: '💡 注意：最後一期金額與前期不同，請確認還款安排。',
+                errorNegativePrice: '⚠️ 商品價格不能為負數，請重新輸入。',
+                errorNegativeRate: '⚠️ 月利率不能為負數，請重新輸入。',
+                errorMonthlyZero: '⚠️ 每月分期金額必須大於 0，請重新輸入。',
+                errorMonthsMin: '⚠️ 還款月數必須至少為 1 個月，請重新輸入。',
+                errorInsufficientPayment: '⚠️ 每月還款金額低於利息費用，無法清償，請提高每月金額或降低利率。',
+                placeholderPrice: '例：14000',
+                placeholderBaseCur: '例如 TWD、USD、MYR',
+                placeholderRate: '例：1（每月利率）',
+                placeholderDeposit: '例：2150',
+                placeholderMonthly: '例：3000',
+                placeholderMonths: '例：5',
+                placeholderExchange: '留空則不換算，例：0.22（CNY）',
+                placeholderTarget: '例：CNY / USD / JPY',
+                monthsLabel: '{months} 個月',
+                prefixPeriods: '（前 {n} 期）',
+            },
+            'zh-CN': {
+                inputCardTitle: '请输入计算参数',
+                toggleLabel: '📋 分期付款',
+                toggleHintOn: '（开启：使用 Flat Rate 计算分期）',
+                toggleHintOff: '（关闭：一次性付清，无利息）',
+                labelPrice: '💰 商品价格（号价）',
+                labelBaseCurrency: '💱 基础货币名称 （显示用）',
+                labelInterestRate: '📈 月利率',
+                labelDeposit: '💵 订金',
+                labelMode: '🔧 还款方式设定',
+                radioByAmount: '指定每月还款金额',
+                radioByMonths: '指定还款月数',
+                labelMonthlyAmount: '💳 每月分期金额',
+                labelRepayMonths: '📅 还款月数 （月）',
+                labelExchangeRate: '🌐 汇率换算 （可选，1 基础币 = ?）',
+                labelTargetCurrency: '💱 目标货币名称 （可选）',
+                btnCalc: '🔍 计算分期',
+                btnReset: '🔄 恢复预设',
+                resultCardTitle: '📊 计算结果',
+                btnExport: '📸 导出结果图片 (JPG)',
+                footerNote: '',
+                noInstallmentTitle: '📌 不分期 · 一次性付清（无利息）',
+                noInstallmentBalance: '应付余额',
+                noInstallmentNote: '商品价格 {price} {cur} − 订金 {deposit} {cur} = 应付 {balance} {cur}',
+                resultSummary: '📋 分期计算摘要',
+                labelTotalInterest: '💰 总利息',
+                labelTotalInstallment: '🧾 分期总额',
+                labelBalanceAfterDeposit: '📦 扣除订金后余额',
+                labelMonthlyPayment: '💳 每月还款金额',
+                labelLastPayment: '🔔 最后一期金额',
+                labelActualMonths: '📅 实际还款月数',
+                labelTotalRepayment: '✅ 分期还款总计',
+                exchangeTitle: '🌐 汇率换算（1 {base} ≈ {rate} {target}）',
+                exchangeTotalInterest: '💰 总利息',
+                exchangeTotalInstallment: '🧾 分期总额',
+                exchangeBalance: '📦 余额',
+                exchangeMonthly: '💳 每月还款',
+                exchangeLast: '🔔 最后一期',
+                stepsTitle: '📝 计算步骤（Flat Rate）',
+                step1: '① 总利息 = 商品价格 × 月利率 × 期数 = {price} {cur} × {rate}% × {months} = <strong>{totalInterest} {cur}</strong>',
+                step2: '② 分期总额 = 商品价格 + 总利息 = {price} + {totalInterest} = <strong>{totalInstallment} {cur}</strong>',
+                step3: '③ 扣除订金后余额 = {totalInstallment} − {deposit} = <strong>{balance} {cur}</strong>',
+                step4ByAmount: '④ 由公式 余额 = 商品价格 × (1 + 月利率 × 期数) − 订金，且每月还款 {monthly}，解得期数 ≈ {approx}，取整为 {months} 个月',
+                step5Last: '⑤ 最后一期 = {balance} − {monthly} × {monthsMinus} = <strong>{last} {cur}</strong>',
+                step4ByMonths: '④ 每月还款 = 余额 ÷ 月数 = {balance} ÷ {months} = 每月 <strong>{monthly} {cur}</strong>（前 {monthsMinus} 期）',
+                step5LastByMonths: '⑤ 最后一期 = {balance} − {monthly} × {monthsMinus} = <strong>{last} {cur}</strong>',
+                tableTitle: '📋 分期还款明细表',
+                tableHeaderPeriod: '期数',
+                tableHeaderAmount: '应还金额 ({cur})',
+                tableHeaderExchange: '约合 {target}',
+                tableHeaderNote: '备注',
+                tablePeriod: '第 {i} 期',
+                tableNoteNormal: '正常还款',
+                tableNoteLast: '最后一期（尾款）',
+                tableTotal: '合计',
+                warningLastDiff: '💡 注意：最后一期金额与前期不同，请确认还款安排。',
+                errorNegativePrice: '⚠️ 商品价格不能为负数，请重新输入。',
+                errorNegativeRate: '⚠️ 月利率不能为负数，请重新输入。',
+                errorMonthlyZero: '⚠️ 每月分期金额必须大于 0，请重新输入。',
+                errorMonthsMin: '⚠️ 还款月数必须至少为 1 个月，请重新输入。',
+                errorInsufficientPayment: '⚠️ 每月还款金额低于利息费用，无法清偿，请提高每月金额或降低利率。',
+                placeholderPrice: '例：14000',
+                placeholderBaseCur: '例如 TWD、USD、MYR',
+                placeholderRate: '例：1（每月利率）',
+                placeholderDeposit: '例：2150',
+                placeholderMonthly: '例：3000',
+                placeholderMonths: '例：5',
+                placeholderExchange: '留空则不换算，例：0.22（CNY）',
+                placeholderTarget: '例：CNY / USD / JPY',
+                monthsLabel: '{months} 个月',
+                prefixPeriods: '（前 {n} 期）',
+            },
+            'en': {
+                inputCardTitle: 'Enter Parameters',
+                toggleLabel: '📋 Installment Plan',
+                toggleHintOn: '(On: Flat Rate installment calculation)',
+                toggleHintOff: '(Off: One-time full payment, no interest)',
+                labelPrice: '💰 Item Price',
+                labelBaseCurrency: '💱 Base Currency',
+                labelInterestRate: '📈 Monthly Rate (%)',
+                labelDeposit: '💵 Deposit',
+                labelMode: '🔧 Repayment Method',
+                radioByAmount: 'Specify monthly payment amount',
+                radioByMonths: 'Specify number of months',
+                labelMonthlyAmount: '💳 Monthly Installment Amount',
+                labelRepayMonths: '📅 Number of Months',
+                labelExchangeRate: '🌐 Exchange Rate (optional, 1 base currency = ?)',
+                labelTargetCurrency: '💱 Target Currency (optional)',
+                btnCalc: '🔍 Calculate',
+                btnReset: '🔄 Reset Defaults',
+                resultCardTitle: '📊 Results',
+                btnExport: '📸 Export Result Image (JPG)',
+                footerNote: '',
+                noInstallmentTitle: '📌 No Installment · Pay in Full (No Interest)',
+                noInstallmentBalance: 'Balance Due',
+                noInstallmentNote: 'Price {price} {cur} − Deposit {deposit} {cur} = Balance {balance} {cur}',
+                resultSummary: '📋 Installment Summary',
+                labelTotalInterest: '💰 Total Interest',
+                labelTotalInstallment: '🧾 Total Installment',
+                labelBalanceAfterDeposit: '📦 Balance After Deposit',
+                labelMonthlyPayment: '💳 Monthly Payment',
+                labelLastPayment: '🔔 Last Payment',
+                labelActualMonths: '📅 Repayment Term',
+                labelTotalRepayment: '✅ Total Repayment',
+                exchangeTitle: '🌐 Exchange Rate (1 {base} ≈ {rate} {target})',
+                exchangeTotalInterest: '💰 Total Interest',
+                exchangeTotalInstallment: '🧾 Total Installment',
+                exchangeBalance: '📦 Balance',
+                exchangeMonthly: '💳 Monthly Payment',
+                exchangeLast: '🔔 Last Payment',
+                stepsTitle: '📝 Calculation Steps (Flat Rate)',
+                step1: '① Total Interest = Price × Monthly Rate × Term = {price} {cur} × {rate}% × {months} = <strong>{totalInterest} {cur}</strong>',
+                step2: '② Total Installment = Price + Interest = {price} + {totalInterest} = <strong>{totalInstallment} {cur}</strong>',
+                step3: '③ Balance after Deposit = {totalInstallment} − {deposit} = <strong>{balance} {cur}</strong>',
+                step4ByAmount: '④ From equation Balance = Price × (1 + Monthly Rate × Term) − Deposit, with monthly payment {monthly}, solve Term ≈ {approx}, rounded to {months} months',
+                step5Last: '⑤ Last Payment = {balance} − {monthly} × {monthsMinus} = <strong>{last} {cur}</strong>',
+                step4ByMonths: '④ Monthly Payment = Balance ÷ Months = {balance} ÷ {months} = <strong>{monthly} {cur}</strong> (first {monthsMinus} periods)',
+                step5LastByMonths: '⑤ Last Payment = {balance} − {monthly} × {monthsMinus} = <strong>{last} {cur}</strong>',
+                tableTitle: '📋 Repayment Schedule',
+                tableHeaderPeriod: 'Period',
+                tableHeaderAmount: 'Amount ({cur})',
+                tableHeaderExchange: 'Approx. {target}',
+                tableHeaderNote: 'Note',
+                tablePeriod: 'Period {i}',
+                tableNoteNormal: 'Regular',
+                tableNoteLast: 'Last (final)',
+                tableTotal: 'Total',
+                warningLastDiff: '💡 Note: The last payment differs from regular ones, please verify.',
+                errorNegativePrice: '⚠️ Price cannot be negative. Please re-enter.',
+                errorNegativeRate: '⚠️ Monthly rate cannot be negative. Please re-enter.',
+                errorMonthlyZero: '⚠️ Monthly payment must be greater than 0. Please re-enter.',
+                errorMonthsMin: '⚠️ Number of months must be at least 1. Please re-enter.',
+                errorInsufficientPayment: '⚠️ Monthly payment is insufficient to cover interest. Please increase amount or lower rate.',
+                placeholderPrice: 'e.g. 14000',
+                placeholderBaseCur: 'e.g. TWD, USD, MYR',
+                placeholderRate: 'e.g. 1 (monthly rate)',
+                placeholderDeposit: 'e.g. 2150',
+                placeholderMonthly: 'e.g. 3000',
+                placeholderMonths: 'e.g. 5',
+                placeholderExchange: 'leave blank to skip, e.g. 0.22',
+                placeholderTarget: 'e.g. CNY / USD / JPY',
+                monthsLabel: '{months} months',
+                prefixPeriods: ' (first {n} periods)',
+            }
+        };
+
+        // ============================================================
+        //  核心邏輯（新算法：月利率 × 期數）
+        // ============================================================
+        (function() {
+            // ---------- DOM ----------
+            const langSelect = document.getElementById('langSelect');
+            const installmentToggle = document.getElementById('installmentToggle');
+            const toggleHint = document.getElementById('toggleHint');
+            const modeRadioGroup = document.getElementById('modeRadioGroup');
+            const monthlyAmountGroup = document.getElementById('monthlyAmountGroup');
+            const repayMonthsGroup = document.getElementById('repayMonthsGroup');
+            const modeGroup = document.getElementById('modeGroup');
+            const interestRateGroup = document.getElementById('interestRateGroup');
+            const resultContent = document.getElementById('resultContent');
+            const btnCalc = document.getElementById('btnCalc');
+            const btnReset = document.getElementById('btnReset');
+            const btnExport = document.getElementById('btnExport');
+            const resultCardTitle = document.getElementById('resultCardTitle');
+
+            const itemPriceInput = document.getElementById('itemPrice');
+            const interestRateInput = document.getElementById('interestRate');
+            const depositInput = document.getElementById('deposit');
+            const monthlyAmountInput = document.getElementById('monthlyAmount');
+            const repayMonthsInput = document.getElementById('repayMonths');
+            const exchangeRateInput = document.getElementById('exchangeRate');
+            const targetCurrencyInput = document.getElementById('targetCurrency');
+            const baseCurrencyInput = document.getElementById('baseCurrency');
+
+            const priceUnitLabel = document.getElementById('priceUnitLabel');
+            const depositUnitLabel = document.getElementById('depositUnitLabel');
+            const monthlyUnitLabel = document.getElementById('monthlyUnitLabel');
+
+            // ---------- 可翻譯靜態元素 ----------
+            const translatableElements = {
+                inputCardTitle: document.getElementById('inputCardTitle'),
+                toggleLabel: document.getElementById('toggleLabel'),
+                labelPrice: document.getElementById('labelPrice'),
+                labelBaseCurrency: document.getElementById('labelBaseCurrency'),
+                labelInterestRate: document.getElementById('labelInterestRate'),
+                labelDeposit: document.getElementById('labelDeposit'),
+                labelMode: document.getElementById('labelMode'),
+                radioByAmountText: document.getElementById('radioByAmountText'),
+                radioByMonthsText: document.getElementById('radioByMonthsText'),
+                labelMonthlyAmount: document.getElementById('labelMonthlyAmount'),
+                labelRepayMonths: document.getElementById('labelRepayMonths'),
+                labelExchangeRate: document.getElementById('labelExchangeRate'),
+                labelTargetCurrency: document.getElementById('labelTargetCurrency'),
+                btnCalc: document.getElementById('btnCalc'),
+                btnReset: document.getElementById('btnReset'),
+                resultCardTitle: document.getElementById('resultCardTitle'),
+                btnExport: document.getElementById('btnExport'),
+                footerNote: document.getElementById('footerNote'),
+            };
+
+            const placeholderMap = {
+                itemPrice: itemPriceInput,
+                baseCurrency: baseCurrencyInput,
+                interestRate: interestRateInput,
+                deposit: depositInput,
+                monthlyAmount: monthlyAmountInput,
+                repayMonths: repayMonthsInput,
+                exchangeRate: exchangeRateInput,
+                targetCurrency: targetCurrencyInput,
+            };
+
+            let currentLang = 'zh-TW';
+
+            // ---------- 工具 ----------
+            function getLang() { return currentLang; }
+
+            function t(key, params) {
+                const dict = LANG[currentLang] || LANG['zh-TW'];
+                let text = dict[key] || key;
+                if (params) {
+                    for (const [k, v] of Object.entries(params)) {
+                        text = text.replace(new RegExp('\\{' + k + '\\}', 'g'), v);
+                    }
+                }
+                return text;
+            }
+
+            function getBaseCurrency() {
+                return baseCurrencyInput.value.trim() || 'TWD';
+            }
+
+            function getCalcMode() {
+                const checked = document.querySelector('input[name="calcMode"]:checked');
+                return checked ? checked.value : 'byAmount';
+            }
+
+            function isInstallment() {
+                return installmentToggle.checked;
+            }
+
+            function fmt(num, decimals = 0) {
+                if (isNaN(num) || !isFinite(num)) return '—';
+                return Number(num).toLocaleString('zh-TW', {
+                    minimumFractionDigits: decimals,
+                    maximumFractionDigits: decimals,
+                });
+            }
+
+            function fmtDecimal(num, decimals = 2) {
+                if (isNaN(num) || !isFinite(num)) return '—';
+                return Number(num).toLocaleString('zh-TW', {
+                    minimumFractionDigits: decimals,
+                    maximumFractionDigits: decimals,
+                });
+            }
+
+            // ========== 【性能優化】防抖工具 (延遲 300ms) ==========
+            function debounce(func, wait) {
+                let timeout;
+                return function(...args) {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => func.apply(this, args), wait);
+                };
+            }
+
+            // ---------- 更新 UI ----------
+            function updateCurrencyLabels() {
+                const bc = getBaseCurrency();
+                priceUnitLabel.textContent = bc;
+                depositUnitLabel.textContent = bc;
+                monthlyUnitLabel.textContent = bc;
+            }
+
+            function updateToggleHint() {
+                const isOn = installmentToggle.checked;
+                const dict = LANG[currentLang] || LANG['zh-TW'];
+                toggleHint.textContent = isOn ? dict.toggleHintOn : dict.toggleHintOff;
+            }
+
+            function updateModeUI() {
+                const mode = getCalcMode();
+                if (mode === 'byAmount') {
+                    monthlyAmountGroup.classList.remove('hidden');
+                    repayMonthsGroup.classList.add('hidden');
+                } else {
+                    monthlyAmountGroup.classList.add('hidden');
+                    repayMonthsGroup.classList.remove('hidden');
+                }
+            }
+
+            function updateUIForToggle() {
+                const installment = isInstallment();
+                if (installment) {
+                    interestRateGroup.classList.remove('hidden');
+                    modeGroup.classList.remove('hidden');
+                    updateModeUI();
+                    interestRateInput.disabled = false;
+                    monthlyAmountInput.disabled = false;
+                    repayMonthsInput.disabled = false;
+                    document.querySelectorAll('input[name="calcMode"]').forEach(r => r.disabled = false);
+                } else {
+                    interestRateGroup.classList.add('hidden');
+                    modeGroup.classList.add('hidden');
+                    monthlyAmountGroup.classList.add('hidden');
+                    repayMonthsGroup.classList.add('hidden');
+                    interestRateInput.disabled = true;
+                    monthlyAmountInput.disabled = true;
+                    repayMonthsInput.disabled = true;
+                    document.querySelectorAll('input[name="calcMode"]').forEach(r => r.disabled = true);
+                }
+                updateToggleHint();
+            }
+
+            // ---------- 更新靜態文字 ----------
+            function updateStaticTexts() {
+                const dict = LANG[currentLang] || LANG['zh-TW'];
+                translatableElements.inputCardTitle.textContent = dict.inputCardTitle;
+                translatableElements.toggleLabel.textContent = dict.toggleLabel;
+                translatableElements.labelPrice.innerHTML = dict.labelPrice + ' <span class="unit" id="priceUnitLabel">' +
+                    getBaseCurrency() + '</span>';
+                translatableElements.labelBaseCurrency.textContent = dict.labelBaseCurrency;
+                translatableElements.labelInterestRate.textContent = dict.labelInterestRate;
+                translatableElements.labelDeposit.textContent = dict.labelDeposit;
+                translatableElements.labelMode.textContent = dict.labelMode;
+                translatableElements.radioByAmountText.textContent = dict.radioByAmount;
+                translatableElements.radioByMonthsText.textContent = dict.radioByMonths;
+                translatableElements.labelMonthlyAmount.textContent = dict.labelMonthlyAmount;
+                translatableElements.labelRepayMonths.textContent = dict.labelRepayMonths;
+                translatableElements.labelExchangeRate.textContent = dict.labelExchangeRate;
+                translatableElements.labelTargetCurrency.textContent = dict.labelTargetCurrency;
+                translatableElements.btnCalc.textContent = dict.btnCalc;
+                translatableElements.btnReset.textContent = dict.btnReset;
+                translatableElements.resultCardTitle.textContent = dict.resultCardTitle;
+                translatableElements.btnExport.textContent = dict.btnExport;
+                translatableElements.footerNote.textContent = dict.footerNote;
+
+                placeholderMap.itemPrice.placeholder = dict.placeholderPrice;
+                placeholderMap.baseCurrency.placeholder = dict.placeholderBaseCur;
+                placeholderMap.interestRate.placeholder = dict.placeholderRate;
+                placeholderMap.deposit.placeholder = dict.placeholderDeposit;
+                placeholderMap.monthlyAmount.placeholder = dict.placeholderMonthly;
+                placeholderMap.repayMonths.placeholder = dict.placeholderMonths;
+                placeholderMap.exchangeRate.placeholder = dict.placeholderExchange;
+                placeholderMap.targetCurrency.placeholder = dict.placeholderTarget;
+
+                updateToggleHint();
+                updateCurrencyLabels();
+            }
+
+            // ========== 【核心計算 – 新算法】 ==========
+            function calculate() {
+                const itemPrice = parseFloat(itemPriceInput.value) || 0;
+                const monthlyRatePercent = parseFloat(interestRateInput.value) || 0;   // 月利率（%）
+                const deposit = parseFloat(depositInput.value) || 0;
+                const monthlyAmount = parseFloat(monthlyAmountInput.value) || 0;
+                const repayMonthsInputVal = parseInt(repayMonthsInput.value) || 0;
+                const exchangeRate = parseFloat(exchangeRateInput.value) || null;
+                const targetCurrency = targetCurrencyInput.value.trim() || '—';
+                const baseCur = getBaseCurrency();
+                const installment = isInstallment();
+                const mode = getCalcMode();
+
+                // 錯誤處理
+                if (itemPrice < 0) {
+                    resultContent.innerHTML = `<div class="warning-note">⚠️ ${t('errorNegativePrice')}</div>`;
+                    return;
+                }
+                if (installment && monthlyRatePercent < 0) {
+                    resultContent.innerHTML = `<div class="warning-note">⚠️ ${t('errorNegativeRate')}</div>`;
+                    return;
+                }
+
+                // ---- 不分期 ----
+                if (!installment) {
+                    const balanceNoInstall = Math.max(0, itemPrice - deposit);
+                    const balanceConverted = exchangeRate ? balanceNoInstall * exchangeRate : null;
+                    const parts = [];
+                    parts.push('<div class="no-installment-result">');
+                    parts.push(`<p style="font-size:0.9rem;color:#5f6b7a;">${t('noInstallmentTitle')}</p>`);
+                    parts.push(
+                        `<p class="big-amount">${t('noInstallmentBalance')}：<strong>${fmt(balanceNoInstall)} ${baseCur}</strong></p>`
+                        );
+                    if (balanceConverted !== null && targetCurrency) {
+                        parts.push(
+                            `<p style="font-size:1rem;color:#e8832b;font-weight:600;">≈ ${fmtDecimal(balanceConverted)} ${targetCurrency}</p>`
+                            );
+                    }
+                    parts.push(
+                        `<p class="note">${t('noInstallmentNote', { price: fmt(itemPrice), cur: baseCur, deposit: fmt(deposit), balance: fmt(balanceNoInstall) })}</p>`
+                        );
+                    parts.push('</div>');
+                    resultContent.innerHTML = parts.join('');
+                    return;
+                }
+
+                // ---- 分期 ----
+                const r = monthlyRatePercent / 100; // 月利率（小數）
+
+                let repayMonths = 0;
+                let regularMonthlyPayment = 0;
+                let lastPayment = 0;
+                let totalInterest = 0;
+                let totalInstallment = 0;
+                let balanceAfterDeposit = 0;
+                let approxMonths = 0; // 用於步驟顯示
+
+                // 根據模式計算
+                if (mode === 'byAmount') {
+                    // 指定每月還款金額 A
+                    const A = monthlyAmount;
+                    if (A <= 0) {
+                        resultContent.innerHTML = `<div class="warning-note">⚠️ ${t('errorMonthlyZero')}</div>`;
+                        return;
+                    }
+                    const P = itemPrice;
+                    const D = deposit;
+                    // 若訂金大於等於商品價格，則無需分期
+                    if (P - D <= 0) {
+                        repayMonths = 0;
+                        totalInterest = 0;
+                        totalInstallment = P;
+                        balanceAfterDeposit = 0;
+                        regularMonthlyPayment = 0;
+                        lastPayment = 0;
+                    } else {
+                        // 分母 = A - P * r
+                        const denom = A - P * r;
+                        if (denom <= 0) {
+                            // 每月還款不足以支付利息
+                            resultContent.innerHTML = `<div class="warning-note">⚠️ ${t('errorInsufficientPayment')}</div>`;
+                            return;
+                        }
+                        const n_float = (P - D) / denom;
+                        if (n_float <= 0) {
+                            resultContent.innerHTML = `<div class="warning-note">⚠️ ${t('errorInsufficientPayment')}</div>`;
+                            return;
+                        }
+                        approxMonths = n_float;
+                        repayMonths = Math.ceil(n_float);
+                        // 重新計算總利息（基於實際期數）
+                        totalInterest = P * r * repayMonths;
+                        totalInstallment = P + totalInterest;
+                        balanceAfterDeposit = Math.max(0, totalInstallment - D);
+                        // 每月還款：前 repayMonths-1 期還 A，最後一期為餘額
+                        if (repayMonths === 1) {
+                            regularMonthlyPayment = 0; // 只有一期，沒有「前期」
+                            lastPayment = balanceAfterDeposit;
+                        } else {
+                            regularMonthlyPayment = A;
+                            const sumPrev = A * (repayMonths - 1);
+                            lastPayment = balanceAfterDeposit - sumPrev;
+                            // 避免最後一期為負（理論上不會，但安全處理）
+                            if (lastPayment < 0) lastPayment = 0;
+                            // 若最後一期與A相差極小，則視為相等
+                            if (Math.abs(lastPayment - A) < 0.01) {
+                                lastPayment = A;
+                                // 若正好整除，則期數可減少？
+                            }
+                        }
+                    }
+                } else {
+                    // 指定還款月數
+                    const n = repayMonthsInputVal;
+                    if (n < 1) {
+                        resultContent.innerHTML = `<div class="warning-note">⚠️ ${t('errorMonthsMin')}</div>`;
+                        return;
+                    }
+                    repayMonths = n;
+                    const P = itemPrice;
+                    const D = deposit;
+                    totalInterest = P * r * n;
+                    totalInstallment = P + totalInterest;
+                    balanceAfterDeposit = Math.max(0, totalInstallment - D);
+                    if (balanceAfterDeposit <= 0) {
+                        regularMonthlyPayment = 0;
+                        lastPayment = 0;
+                    } else {
+                        // 每月還款 = 餘額 ÷ 期數（整除，最後一期調整）
+                        const baseMonthly = Math.floor(balanceAfterDeposit / n);
+                        regularMonthlyPayment = baseMonthly;
+                        // 若整除，則全部相同
+                        const remainder = balanceAfterDeposit - baseMonthly * (n - 1);
+                        lastPayment = remainder;
+                        // 若最後一期與前期相等，則一致
+                        if (Math.abs(lastPayment - baseMonthly) < 0.01) {
+                            lastPayment = baseMonthly;
+                            regularMonthlyPayment = baseMonthly;
+                        }
+                        // 若最後一期為0（極端），調整
+                        if (lastPayment < 0) lastPayment = 0;
+                    }
+                    // approxMonths 用於顯示，等於 n
+                    approxMonths = n;
+                }
+
+                // 若 balanceAfterDeposit <= 0，則無分期
+                if (balanceAfterDeposit <= 0 || repayMonths === 0) {
+                    const parts = [];
+                    parts.push('<div class="no-installment-result">');
+                    parts.push(`<p style="font-size:0.9rem;color:#5f6b7a;">✅ 訂金已足夠支付全額，無需分期</p>`);
+                    parts.push(`<p class="big-amount">應付餘額：<strong>0 ${baseCur}</strong></p>`);
+                    parts.push('</div>');
+                    resultContent.innerHTML = parts.join('');
+                    return;
+                }
+
+                // ---- 構建結果 ----
+                const hasExchange = exchangeRate !== null && exchangeRate > 0;
+                const currencyLabel = targetCurrency || '外幣';
+
+                const parts = [];
+                parts.push('<div class="result-section">');
+                parts.push(`<h3>${t('resultSummary')}</h3>`);
+                parts.push('<div class="result-grid">');
+
+                parts.push('<div class="result-item">');
+                parts.push(`<span class="r-label">${t('labelTotalInterest')}</span>`);
+                parts.push(`<span class="r-value highlight">${fmt(totalInterest)} ${baseCur}</span>`);
+                parts.push('</div>');
+
+                parts.push('<div class="result-item">');
+                parts.push(`<span class="r-label">${t('labelTotalInstallment')}</span>`);
+                parts.push(`<span class="r-value big">${fmt(totalInstallment)} ${baseCur}</span>`);
+                parts.push('</div>');
+
+                parts.push('<div class="result-item">');
+                parts.push(`<span class="r-label">${t('labelBalanceAfterDeposit')}</span>`);
+                parts.push(`<span class="r-value highlight">${fmt(balanceAfterDeposit)} ${baseCur}</span>`);
+                parts.push('</div>');
+
+                // 每月還款金額
+                let monthlyDisplay = '—';
+                if (repayMonths > 1) {
+                    monthlyDisplay = fmt(regularMonthlyPayment) + ' ' + baseCur + t('prefixPeriods', { n: repayMonths - 1 });
+                } else if (repayMonths === 1) {
+                    monthlyDisplay = fmt(lastPayment) + ' ' + baseCur;
+                }
+                parts.push('<div class="result-item">');
+                parts.push(`<span class="r-label">${t('labelMonthlyPayment')}</span>`);
+                parts.push(`<span class="r-value">${monthlyDisplay}</span>`);
+                parts.push('</div>');
+
+                if (repayMonths > 1 && Math.abs(lastPayment - regularMonthlyPayment) > 1) {
+                    parts.push('<div class="result-item">');
+                    parts.push(`<span class="r-label">${t('labelLastPayment')}</span>`);
+                    parts.push(`<span class="r-value highlight">${fmt(lastPayment)} ${baseCur}</span>`);
+                    parts.push('</div>');
+                }
+
+                parts.push('<div class="result-item">');
+                parts.push(`<span class="r-label">${t('labelActualMonths')}</span>`);
+                parts.push(`<span class="r-value big">${t('monthsLabel', { months: repayMonths })}</span>`);
+                parts.push('</div>');
+
+                parts.push('<div class="result-item">');
+                parts.push(`<span class="r-label">${t('labelTotalRepayment')}</span>`);
+                parts.push(`<span class="r-value">${fmt(balanceAfterDeposit)} ${baseCur}</span>`);
+                parts.push('</div>');
+
+                parts.push('</div>');
+
+                // 匯率換算
+                if (hasExchange) {
+                    parts.push(
+                        '<div style="margin-top:14px;padding:12px 14px;background:#fff;border-radius:10px;border:1px dashed #e8832b;">'
+                        );
+                    parts.push(
+                        `<p style="font-size:0.85rem;font-weight:700;color:#e8832b;">${t('exchangeTitle', { base: baseCur, rate: fmtDecimal(exchangeRate, 4), target: currencyLabel })}</p>`
+                        );
+                    parts.push('<div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:6px;font-size:0.85rem;">');
+                    parts.push(
+                        `<span>${t('exchangeTotalInterest')}：<strong>${fmtDecimal(totalInterest * exchangeRate, 2)} ${currencyLabel}</strong></span>`
+                        );
+                    parts.push(
+                        `<span>${t('exchangeTotalInstallment')}：<strong>${fmtDecimal(totalInstallment * exchangeRate, 2)} ${currencyLabel}</strong></span>`
+                        );
+                    parts.push(
+                        `<span>${t('exchangeBalance')}：<strong>${fmtDecimal(balanceAfterDeposit * exchangeRate, 2)} ${currencyLabel}</strong></span>`
+                        );
+                    if (repayMonths > 1) {
+                        parts.push(
+                            `<span>${t('exchangeMonthly')}：<strong>${fmtDecimal(regularMonthlyPayment * exchangeRate, 2)} ${currencyLabel}</strong></span>`
+                            );
+                    }
+                    if (repayMonths > 1 && Math.abs(lastPayment - regularMonthlyPayment) > 1) {
+                        parts.push(
+                            `<span>${t('exchangeLast')}：<strong>${fmtDecimal(lastPayment * exchangeRate, 2)} ${currencyLabel}</strong></span>`
+                            );
+                    }
+                    parts.push('</div></div>');
+                }
+
+                parts.push('</div>');
+
+                // ---- 步驟 ----
+                parts.push('<div class="steps-section">');
+                parts.push(`<h4>${t('stepsTitle')}</h4>`);
+                // 步驟1：總利息 = 商品價格 × 月利率 × 期數
+                parts.push(
+                    `<div class="step-line">${t('step1', { price: fmt(itemPrice), cur: baseCur, rate: fmtDecimal(monthlyRatePercent, 2), months: repayMonths, totalInterest: fmt(totalInterest) })}</div>`
+                    );
+                parts.push(
+                    `<div class="step-line">${t('step2', { price: fmt(itemPrice), totalInterest: fmt(totalInterest), totalInstallment: fmt(totalInstallment), cur: baseCur })}</div>`
+                    );
+                parts.push(
+                    `<div class="step-line">${t('step3', { totalInstallment: fmt(totalInstallment), deposit: fmt(deposit), balance: fmt(balanceAfterDeposit), cur: baseCur })}</div>`
+                    );
+                if (mode === 'byAmount') {
+                    // 步驟4 byAmount
+                    parts.push(
+                        `<div class="step-line">${t('step4ByAmount', { monthly: fmt(regularMonthlyPayment), approx: fmtDecimal(approxMonths, 2), months: repayMonths })}</div>`
+                        );
+                    if (repayMonths > 1 && Math.abs(lastPayment - regularMonthlyPayment) > 1) {
+                        parts.push(
+                            `<div class="step-line">${t('step5Last', { balance: fmt(balanceAfterDeposit), monthly: fmt(regularMonthlyPayment), monthsMinus: repayMonths - 1, last: fmt(lastPayment), cur: baseCur })}</div>`
+                            );
+                    }
+                } else {
+                    // byMonths
+                    parts.push(
+                        `<div class="step-line">${t('step4ByMonths', { balance: fmt(balanceAfterDeposit), months: repayMonths, monthly: fmt(regularMonthlyPayment), monthsMinus: repayMonths - 1, cur: baseCur })}</div>`
+                        );
+                    if (repayMonths > 1 && Math.abs(lastPayment - regularMonthlyPayment) > 1) {
+                        parts.push(
+                            `<div class="step-line">${t('step5LastByMonths', { balance: fmt(balanceAfterDeposit), monthly: fmt(regularMonthlyPayment), monthsMinus: repayMonths - 1, last: fmt(lastPayment), cur: baseCur })}</div>`
+                            );
+                    }
+                }
+                parts.push('</div>');
+
+                // ---- 還款明細表 ----
+                if (repayMonths > 0 && balanceAfterDeposit > 0) {
+                    parts.push('<div class="steps-section" style="margin-top:10px;">');
+                    parts.push(`<h4>${t('tableTitle')}</h4>`);
+                    parts.push(
+                        '<table><thead><tr><th>' + t('tableHeaderPeriod') + '</th><th>' + t('tableHeaderAmount', { cur: baseCur }) +
+                        '</th>'
+                        );
+                    if (hasExchange) {
+                        parts.push('<th>' + t('tableHeaderExchange', { target: currencyLabel }) + '</th>');
+                    }
+                    parts.push('<th>' + t('tableHeaderNote') + '</th></tr></thead><tbody>');
+
+                    let cumulative = 0;
+                    for (let i = 1; i <= repayMonths; i++) {
+                        let pay = (i < repayMonths) ? regularMonthlyPayment : lastPayment;
+                        let note = (i < repayMonths) ? t('tableNoteNormal') : (Math.abs(lastPayment - regularMonthlyPayment) <=
+                            1 ? t('tableNoteNormal') : t('tableNoteLast'));
+                        cumulative += pay;
+                        parts.push('<tr>');
+                        parts.push(`<td class="period-cell">${t('tablePeriod', { i: i })}</td>`);
+                        parts.push(`<td class="amount-cell">${fmt(pay)}</td>`);
+                        if (hasExchange) {
+                            parts.push(`<td style="color:#e8832b;font-weight:600;">${fmtDecimal(pay * exchangeRate, 2)}</td>`);
+                        }
+                        parts.push(`<td class="note-cell">${note}</td>`);
+                        parts.push('</tr>');
+                    }
+
+                    parts.push('<tfoot><tr>');
+                    parts.push(`<td>${t('tableTotal')}</td>`);
+                    parts.push(`<td style="color:#e8832b;font-weight:700;">${fmt(cumulative)} ${baseCur}</td>`);
+                    if (hasExchange) {
+                        parts.push(
+                            `<td style="color:#e8832b;font-weight:700;">${fmtDecimal(cumulative * exchangeRate, 2)} ${currencyLabel}</td>`
+                            );
+                    }
+                    parts.push('<td></td></tr></tfoot></table></div>');
+                }
+
+                if (repayMonths > 0 && balanceAfterDeposit > 0 && Math.abs(lastPayment - regularMonthlyPayment) > 1) {
+                    parts.push(`<div class="warning-note" style="margin-top:10px;">${t('warningLastDiff')}</div>`);
+                }
+
+                resultContent.innerHTML = parts.join('');
+            }
+
+            // ========== 【性能優化】防抖版本的 calculate ==========
+            const debouncedCalculate = debounce(calculate, 300);
+
+            // ---------- 事件綁定 ----------
+            langSelect.addEventListener('change', function() {
+                currentLang = this.value;
+                updateStaticTexts();
+                calculate();
+            });
+
+            baseCurrencyInput.addEventListener('input', function() {
+                updateCurrencyLabels();
+                debouncedCalculate();
+            });
+            baseCurrencyInput.addEventListener('change', function() {
+                updateCurrencyLabels();
+                calculate();
+            });
+
+            installmentToggle.addEventListener('change', function() {
+                updateUIForToggle();
+                calculate();
+            });
+
+            modeRadioGroup.addEventListener('change', function(e) {
+                if (e.target.name === 'calcMode') {
+                    updateModeUI();
+                    calculate();
+                }
+            });
+
+            const allInputs = [
+                itemPriceInput, interestRateInput, depositInput,
+                monthlyAmountInput, repayMonthsInput,
+                exchangeRateInput, targetCurrencyInput
+            ];
+            allInputs.forEach(input => {
+                input.addEventListener('input', debouncedCalculate);
+                input.addEventListener('change', calculate);
+            });
+
+            btnCalc.addEventListener('click', function() {
+                calculate();
+                document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+
+            btnReset.addEventListener('click', function() {
+                itemPriceInput.value = 14000;
+                interestRateInput.value = 1;      // 預設月利率 1%
+                depositInput.value = 2150;
+                monthlyAmountInput.value = 3000;
+                repayMonthsInput.value = 5;
+                exchangeRateInput.value = '';
+                targetCurrencyInput.value = 'CNY';
+                baseCurrencyInput.value = 'TWD';
+                installmentToggle.checked = true;
+                const byAmountRadio = document.querySelector('input[name="calcMode"][value="byAmount"]');
+                if (byAmountRadio) byAmountRadio.checked = true;
+                updateCurrencyLabels();
+                updateUIForToggle();
+                updateModeUI();
+                calculate();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+
+            // ---------- 匯出圖片 ----------
+            btnExport.addEventListener('click', function() {
+                const originalText = resultCardTitle.textContent;
+                resultCardTitle.textContent = '';
+                btnExport.style.display = 'none';
+                html2canvas(document.getElementById('resultCard'), {
+                    backgroundColor: '#ffffff',
+                    scale: 2,
+                    logging: false,
+                    allowTaint: false,
+                    useCORS: true
+                }).then(canvas => {
+                    resultCardTitle.textContent = originalText;
+                    btnExport.style.display = '';
+                    const imgData = canvas.toDataURL('image/jpeg', 0.92);
+                    const link = document.createElement('a');
+                    link.download = '分期計算結果.jpg';
+                    link.href = imgData;
+                    link.click();
+                }).catch(error => {
+                    resultCardTitle.textContent = originalText;
+                    btnExport.style.display = '';
+                    alert('匯出圖片失敗，請重試。');
+                    console.error(error);
+                });
+            });
+
+            // ---------- 初始化 ----------
+            function init() {
+                currentLang = langSelect.value;
+                updateStaticTexts();
+                updateUIForToggle();
+                updateModeUI();
+                calculate();
+            }
+
+            document.getElementById('currentYear').textContent = new Date().getFullYear();
+
+            // 防盜（保留）
+            document.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                return false;
+            });
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'F12' ||
+                    (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J')) ||
+                    (e.ctrlKey && e.key === 'U')) {
+                    e.preventDefault();
+                    return false;
+                }
+                if (e.key === 'Enter' && document.activeElement && document.activeElement.tagName === 'INPUT') {
+                    e.preventDefault();
+                    calculate();
+                    document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+
+            init();
+            console.log('© ClementWong 分期計算器 (新算法：月利率 × 期數)');
+        })();
+    </script>
+</body>
+</html>
